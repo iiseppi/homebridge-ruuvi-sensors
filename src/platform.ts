@@ -46,6 +46,14 @@ export class RuuviSensorsPlatform implements DynamicPlatformPlugin {
     this.api.on('didFinishLaunching', () => {
       this.cleanupOrphanedAccessories();
 
+      // UUSI LISÄYS: Herätetään Fakegato ja palvelut heti käynnistyksessä kaikille laitteille!
+      for (const accessory of this.accessories.values()) {
+        const mac = accessory.context.device.mac.toUpperCase();
+        if (!this.accessoryHandlers.has(mac)) {
+          this.accessoryHandlers.set(mac, new RuuviPlatformAccessory(this, accessory));
+        }
+      }
+
       if (this.config.gateway && this.config.gateway.enabled) {
         this.setupWebhookServer();
       }
@@ -102,8 +110,6 @@ export class RuuviSensorsPlatform implements DynamicPlatformPlugin {
           const rawHexData = mfgData.toString('hex');
           let mac = peripheral.address ? peripheral.address.toUpperCase() : '';
           
-          // KORJAUS MAC-KONEILLE: Jos käyttöjärjestelmä piilottaa BLE MAC-osoitteen,
-          // puretaan aito MAC suoraan Ruuvin Format 5 -datapaketin loppuosasta (tavut 20-25)
           if ((!mac || mac === '') && mfgData.length >= 26 && mfgData[2] === 5) {
             const macBytes = mfgData.subarray(20, 26);
             mac = Array.from(macBytes)
@@ -112,7 +118,6 @@ export class RuuviSensorsPlatform implements DynamicPlatformPlugin {
           }
           
           if (mac) {
-            this.log.debug(`[Bluetooth] Discovered Ruuvi data from ${mac}`);
             this.processRuuviData(mac, rawHexData);
           }
         }
