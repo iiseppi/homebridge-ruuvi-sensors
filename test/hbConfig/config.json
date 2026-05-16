@@ -1,22 +1,4 @@
 {
-    "bridge": {
-        "name": "RuuviDevBridge",
-        "username": "11:22:33:44:55:66",
-        "port": 52000,
-        "pin": "031-45-154"
-    },
-    "plugins": [
-        "homebridge-config-ui-x",
-        "homebridge-ruuvi-sensors"
-    ],
-    "accessories": [],
-    "platforms": [
-        {
-            "name": "Config",
-            "port": 8081,
-            "platform": "config"
-        },
-        {
             "platform": "RuuviSensors",
             "name": "RuuviSensors",
             "gateway": {
@@ -29,9 +11,11 @@
             "tags": [
                 {
                     "name": "Sauna",
+                    "mac": "AA:BB:CC:DD:EE:FF"
+                },
+                {
+                    "name": "Makuuhuone",
                     "mac": "D9:51:FD:F1:CE:85"
                 }
             ]
         }
-    ]
-}

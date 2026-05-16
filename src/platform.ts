@@ -100,7 +100,16 @@ export class RuuviSensorsPlatform implements DynamicPlatformPlugin {
         const companyId = mfgData.readUInt16LE(0);
         if (companyId === 0x0499) {
           const rawHexData = mfgData.toString('hex');
-          const mac = peripheral.address ? peripheral.address.toUpperCase() : '';
+          let mac = peripheral.address ? peripheral.address.toUpperCase() : '';
+          
+          // KORJAUS MAC-KONEILLE: Jos käyttöjärjestelmä piilottaa BLE MAC-osoitteen,
+          // puretaan aito MAC suoraan Ruuvin Format 5 -datapaketin loppuosasta (tavut 20-25)
+          if ((!mac || mac === '') && mfgData.length >= 26 && mfgData[2] === 5) {
+            const macBytes = mfgData.subarray(20, 26);
+            mac = Array.from(macBytes)
+              .map(b => b.toString(16).padStart(2, '0').toUpperCase())
+              .join(':');
+          }
           
           if (mac) {
             this.log.debug(`[Bluetooth] Discovered Ruuvi data from ${mac}`);
