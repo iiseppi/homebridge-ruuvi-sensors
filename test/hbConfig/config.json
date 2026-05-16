@@ -1,6 +1,26 @@
 {
+    "bridge": {
+        "name": "RuuviDevBridge",
+        "username": "11:22:33:44:55:66",
+        "port": 52000,
+        "pin": "031-45-154",
+        "debug": true
+    },
+    "plugins": [
+        "homebridge-config-ui-x",
+        "homebridge-ruuvi-sensors"
+    ],
+    "accessories": [],
+    "platforms": [
+        {
+            "name": "Config",
+            "port": 8081,
+            "platform": "config"
+        },
+        {
             "platform": "RuuviSensors",
             "name": "RuuviSensors",
+            "debug": true,
             "gateway": {
                 "enabled": true,
                 "port": 8085
@@ -19,3 +39,5 @@
                 }
             ]
         }
+    ]
+}

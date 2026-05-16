@@ -120,16 +120,20 @@ function parseFormatE1(payload: string): RuuviMeasurement | null {
 }
 
 /**
- * Pääfunktio, joka on nyt sijoitettu apufunktioiden alapuolelle.
+ * Pääfunktio, joka ohjaa datan oikealle parserille.
  */
 export function parseRuuviPayload(hex: string, decryptionKey?: string): RuuviMeasurement | null {
   const hexUpper = hex.toUpperCase();
-  const ruuviHeaderIndex = hexUpper.indexOf('FF9904');
+  
+  // Ruuvin valmistajatunnus on 9904. 
+  // Webhookissa sen edellä on BLE-tunniste FF (FF9904), mutta Noble antaa sen usein ilman FF:ää.
+  const ruuviHeaderIndex = hexUpper.indexOf('9904');
   if (ruuviHeaderIndex === -1) {
     return null;
   }
 
-  const payload = hexUpper.substring(ruuviHeaderIndex + 6);
+  // Leikataan payload esiin tunnuksen (9904) jälkeen (hypätään 4 merkkiä)
+  const payload = hexUpper.substring(ruuviHeaderIndex + 4);
   const dataFormat = parseInt(payload.substring(0, 2), 16);
 
   switch (dataFormat) {
