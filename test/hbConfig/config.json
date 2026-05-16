@@ -1,31 +1,34 @@
 {
-  "bridge": {
-    "name": "PluginTemplate",
-    "username": "AA:BB:CC:DD:EE:FF",
-    "port": 51826,
-    "pin": "031-45-154"
-  },
-  "description": "HomeBridge HTTP Status Control",
-  "plugins": [
-    "homebridge-plugin-name",
-    "homebridge-config-ui-x"
-  ],
-  "platforms": [
-    {
-      "name": "Config",
-      "port": 8581,
-      "auth": "none",
-      "theme": "auto",
-      "tempUnits": "c",
-      "lang": "auto",
-      "sudo": false,
-      "platform": "config",
-      "debug": false
+    "bridge": {
+        "name": "RuuviDevBridge",
+        "username": "11:22:33:44:55:66",
+        "port": 52000,
+        "pin": "031-45-154"
     },
-    {
-      "name": "homebridge-plugin-name",
-      "platform": "ExampleHomebridgePlugin"
-    }
-  ],
-  "accessories": []
+    "plugins": [
+        "homebridge-config-ui-x",
+        "homebridge-ruuvi-sensors"
+    ],
+    "accessories": [],
+    "platforms": [
+        {
+            "name": "Config",
+            "port": 8081,
+            "platform": "config"
+        },
+        {
+            "platform": "RuuviSensors",
+            "name": "RuuviSensors",
+            "gateway": {
+                "enabled": true,
+                "port": 8085
+            },
+            "tags": [
+                {
+                    "name": "Sauna",
+                    "mac": "AA:BB:CC:DD:EE:FF"
+                }
+            ]
+        }
+    ]
 }

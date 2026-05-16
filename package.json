@@ -1,22 +1,29 @@
 {
-  "name": "homebridge-plugin-name",
-  "displayName": "Plugin Name",
+  "name": "homebridge-ruuvi-sensors",
+  "displayName": "Ruuvi Sensors",
   "type": "module",
   "version": "1.0.0",
-  "private": true,
-  "description": "A short description about what your plugin does.",
-  "author": "Your Name",
+  "private": false,
+  "description": "A modern Homebridge Dynamic Platform for Ruuvi sensors. Supports Ruuvi Gateway webhooks, local Bluetooth scanning, and all Ruuvi data formats including encrypted format 8.",
+  "author": "iiseppi",
   "license": "Apache-2.0",
-  "homepage": "https://github.com/USERNAME/GITHUB_PROJECT_NAME#readme",
+  "homepage": "https://github.com/iiseppi/homebridge-ruuvi-sensors#readme",
   "repository": {
     "type": "git",
-    "url": "https://github.com/USERNAME/GITHUB_PROJECT_NAME.git"
+    "url": "https://github.com/iiseppi/homebridge-ruuvi-sensors.git"
   },
   "bugs": {
-    "url": "https://github.com/USERNAME/GITHUB_PROJECT_NAME/issues"
+    "url": "https://github.com/iiseppi/homebridge-ruuvi-sensors/issues"
   },
   "keywords": [
-    "homebridge-plugin"
+    "homebridge-plugin",
+    "homebridge",
+    "ruuvi",
+    "ruuvitag",
+    "gateway",
+    "matter",
+    "bluetooth",
+    "weather"
   ],
   "main": "dist/index.js",
   "engines": {
@@ -30,6 +37,8 @@
     "watch": "npm run build && npm link && nodemon"
   },
   "dependencies": {
+    "@abandonware/noble": "^1.9.2-22",
+    "fakegato-history": "^0.6.2",
     "homebridge-lib": "^8.0.1"
   },
   "devDependencies": {

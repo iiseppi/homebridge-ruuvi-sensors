@@ -1,17 +1,60 @@
 {
-  "pluginAlias": "ExampleHomebridgePlugin",
+  "pluginAlias": "RuuviSensors",
   "pluginType": "platform",
   "singular": true,
-  "strictValidation": false,
   "schema": {
     "type": "object",
-    "required": ["name"],
-    "additionalProperties": false,
     "properties": {
-      "name": {
-        "title": "Name",
-        "type": "string",
-        "default": "Example Dynamic Platform"
+      "gateway": {
+        "title": "Ruuvi Gateway (Webhook)",
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "title": "Enable Webhook Server",
+            "type": "boolean",
+            "default": true
+          },
+          "port": {
+            "title": "Webhook Port",
+            "type": "integer",
+            "default": 8080
+          }
+        }
+      },
+      "bluetooth": {
+        "title": "Local Bluetooth Scanning",
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "title": "Enable Bluetooth",
+            "type": "boolean",
+            "default": false
+          }
+        }
+      },
+      "tags": {
+        "title": "Configured RuuviTags",
+        "type": "array",
+        "items": {
+          "title": "RuuviTag",
+          "type": "object",
+          "properties": {
+            "name": {
+              "title": "Name (e.g. Sauna)",
+              "type": "string",
+              "required": true
+            },
+            "mac": {
+              "title": "MAC Address (e.g. AA:BB:CC:DD:EE:FF)",
+              "type": "string",
+              "required": true
+            },
+            "dataFormat8Key": {
+              "title": "Decryption Key (Format 8 only, leave empty otherwise)",
+              "type": "string"
+            }
+          }
+        }
       }
     }
   }
