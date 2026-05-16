@@ -23,10 +23,13 @@
                 "enabled": true,
                 "port": 8085
             },
+            "bluetooth": {
+                "enabled": true
+            },
             "tags": [
                 {
                     "name": "Sauna",
-                    "mac": "AA:BB:CC:DD:EE:FF"
+                    "mac": "D9:51:FD:F1:CE:85"
                 }
             ]
         }
