@@ -1,17 +1,25 @@
 import { Service, PlatformAccessory } from 'homebridge';
 import { RuuviSensorsPlatform } from './platform.js';
-// Tuodaan uusi yhteinen parseri
 import { parseRuuviPayload } from './ruuviParser.js'; 
 
-// Ohitetaan TypeScriptin tyyppitarkistus tälle vanhemmalle JS-kirjastolle
-// @ts-ignore
+// KORJAUS: Käytetään ts-expect-erroria linterin vaatimuksesta
+// @ts-expect-error - fakegato-history lacks official typescript definitions
 import fakegato from 'fakegato-history';
+
+interface FakeGatoHistoryInstance {
+  addEntry(entry: {
+    time: number;
+    temp: number;
+    humidity: number;
+    pressure: number;
+  }): void;
+}
 
 export class RuuviPlatformAccessory {
   private tempService: Service;
   private humidityService: Service;
   private batteryService: Service;
-  private historyService: any;
+  private historyService: FakeGatoHistoryInstance;
 
   constructor(
     private readonly platform: RuuviSensorsPlatform,
@@ -37,31 +45,25 @@ export class RuuviPlatformAccessory {
       log: this.platform.log,
       storage: 'fs',
       minutes: 10,
-    });
+    }) as FakeGatoHistoryInstance;
   }
 
   public updateData(rawHexData: string) {
     try {
-      // Haetaan mahdollinen salausavain laitteen contextista (Format 8 -purkua varten)
-      const decryptionKey = this.accessory.context.device.dataFormat8Key;
-
-      // Kutsutaan uutta parseria, joka hanskaa kaikki eri formaatit
+      const decryptionKey = this.accessory.context.device.dataFormat8Key as string | undefined;
       const parsedData = parseRuuviPayload(rawHexData, decryptionKey);
 
       if (!parsedData) {
         return;
       }
 
-      // Lokitetaan myös käytetty dataformaatti (esim. Fmt 5 tai Fmt 8)
       this.platform.log.debug(
         `[${this.accessory.displayName}] Fmt ${parsedData.dataFormat} -> Temp ${parsedData.temperature}°C, Hum ${parsedData.humidity}%`,
       );
 
-      // Päivitetään HomeKit-arvot reaaliajassa
       this.tempService.updateCharacteristic(this.platform.Characteristic.CurrentTemperature, parsedData.temperature);
       this.humidityService.updateCharacteristic(this.platform.Characteristic.CurrentRelativeHumidity, parsedData.humidity);
 
-      // Pariston tilan päivitys, jos data sisältää jännitteen
       if (parsedData.batteryVoltage) {
         const batteryLevel = Math.max(0, Math.min(100, ((parsedData.batteryVoltage - 2500) / 500) * 100));
         this.batteryService.updateCharacteristic(this.platform.Characteristic.BatteryLevel, batteryLevel);
@@ -72,7 +74,6 @@ export class RuuviPlatformAccessory {
         this.batteryService.updateCharacteristic(this.platform.Characteristic.StatusLowBattery, lowBatteryStatus);
       }
 
-      // Tallennetaan historiamerkintä Eve-sovellusta varten
       this.historyService.addEntry({
         time: Math.round(new Date().valueOf() / 1000),
         temp: parsedData.temperature,

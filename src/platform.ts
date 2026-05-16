@@ -2,9 +2,30 @@ import { API, DynamicPlatformPlugin, Logger, PlatformAccessory, PlatformConfig, 
 import { PLATFORM_NAME, PLUGIN_NAME } from './settings.js';
 import * as http from 'http';
 import { RuuviPlatformAccessory } from './platformAccessory.js';
+import * as noble from '@abandonware/noble';
 
-// Tuodaan Bluetooth-kirjasto oikeaoppisesti ES-moduulina
-import noble from '@abandonware/noble';
+interface RuuviTagConfig {
+  name: string;
+  mac: string;
+  dataFormat8Key?: string;
+}
+
+interface NoblePeripheral {
+  address: string;
+  advertisement?: {
+    manufacturerData?: Buffer;
+  };
+}
+
+interface GatewayTagData {
+  data: string;
+}
+
+interface GatewayPayload {
+  data?: {
+    tags?: Record<string, GatewayTagData>;
+  };
+}
 
 export class RuuviSensorsPlatform implements DynamicPlatformPlugin {
   public readonly Service: typeof Service;
@@ -23,12 +44,12 @@ export class RuuviSensorsPlatform implements DynamicPlatformPlugin {
     this.log.debug('Finished initializing platform:', this.config.name);
 
     this.api.on('didFinishLaunching', () => {
-      // 1. Käynnistetään Webhook-palvelin jos se on päällä asetuksissa
+      this.cleanupOrphanedAccessories();
+
       if (this.config.gateway && this.config.gateway.enabled) {
         this.setupWebhookServer();
       }
 
-      // 2. Käynnistetään Bluetooth-skannaus jos se on päällä asetuksissa
       if (this.config.bluetooth && this.config.bluetooth.enabled) {
         this.setupBluetooth();
       }
@@ -37,35 +58,48 @@ export class RuuviSensorsPlatform implements DynamicPlatformPlugin {
 
   configureAccessory(accessory: PlatformAccessory) {
     this.log.info('Loading accessory from cache:', accessory.displayName);
-    this.accessories.set(accessory.context.device.mac.toUpperCase(), accessory);
+    const mac = accessory.context.device?.mac?.toUpperCase();
+    if (mac) {
+      this.accessories.set(mac, accessory);
+    } else {
+      const placeholderMac = 'UNKNOWN_' + Math.random().toString(36).substring(2, 9).toUpperCase();
+      this.accessories.set(placeholderMac, accessory);
+    }
   }
 
-  // --- BLUETOOTH-LOGIIKKA ---
+  cleanupOrphanedAccessories() {
+    const configuredTags = (this.config.tags || []) as RuuviTagConfig[];
+    const configuredMacs = configuredTags.map((t) => t.mac.toUpperCase());
+
+    for (const [mac, accessory] of this.accessories.entries()) {
+      if (mac.startsWith('UNKNOWN_') || !configuredMacs.includes(mac)) {
+        this.log.info('Removing orphaned or unconfigured accessory from HomeKit:', accessory.displayName);
+        this.api.unregisterPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [accessory]);
+        this.accessories.delete(mac);
+      }
+    }
+  }
+
   setupBluetooth() {
     this.log.info('Initializing local Bluetooth scanning...');
 
-    // noble vaatii stateChange-tapahtuman kuuntelun ennen kuin skannaus voidaan aloittaa
-    noble.on('stateChange', (state: string) => {
+    noble.default.on('stateChange', (state: string) => {
       if (state === 'poweredOn') {
         this.log.info('Bluetooth hardware is ready. Starting to scan for RuuviTags...');
-        // true sallii duplikaatit, jotta saamme jatkuvaa reaaliaikaista dataa antureilta
-        noble.startScanning([], true);
+        noble.default.startScanning([], true);
       } else {
         this.log.warn(`Bluetooth state changed to: ${state}. Scanning stopped.`);
-        noble.stopScanning();
+        noble.default.stopScanning();
       }
     });
 
-    noble.on('discover', (peripheral: any) => {
+    noble.default.on('discover', (peripheral: NoblePeripheral) => {
       const mfgData = peripheral.advertisement?.manufacturerData;
       
-      // Tarkistetaan onko kyseessä RuuviTag (valmistajatunnus 0x0499)
       if (mfgData && mfgData.length >= 2) {
         const companyId = mfgData.readUInt16LE(0);
         if (companyId === 0x0499) {
           const rawHexData = mfgData.toString('hex');
-          
-          // Haetaan laitteen MAC-osoite ja siistitään se muotoon AA:BB:CC:DD:EE:FF
           const mac = peripheral.address ? peripheral.address.toUpperCase() : '';
           
           if (mac) {
@@ -77,7 +111,6 @@ export class RuuviSensorsPlatform implements DynamicPlatformPlugin {
     });
   }
 
-  // --- WEBHOOK-LOGIIKKA ---
   setupWebhookServer() {
     const port = this.config.gateway.port || 8080;
 
@@ -87,15 +120,15 @@ export class RuuviSensorsPlatform implements DynamicPlatformPlugin {
         req.on('data', chunk => body += chunk.toString());
         req.on('end', () => {
           try {
-            const payload = JSON.parse(body);
+            const payload = JSON.parse(body) as GatewayPayload;
             if (payload.data && payload.data.tags) {
               for (const [mac, tagData] of Object.entries(payload.data.tags)) {
-                const rawHexData = (tagData as any).data;
+                const rawHexData = tagData.data;
                 this.processRuuviData(mac.toUpperCase(), rawHexData);
               }
             }
             res.writeHead(200); res.end('OK');
-          } catch (error) {
+          } catch {
             res.writeHead(400); res.end('Bad Request');
           }
         });
@@ -109,13 +142,11 @@ export class RuuviSensorsPlatform implements DynamicPlatformPlugin {
     });
   }
 
-  // --- YHTEINEN DATAN KÄSITTELY ---
   processRuuviData(mac: string, rawHexData: string) {
     const formattedMac = mac.toUpperCase();
-    const configuredTags = this.config.tags || [];
-    const deviceConfig = configuredTags.find((t: any) => t.mac.toUpperCase() === formattedMac);
+    const configuredTags = (this.config.tags || []) as RuuviTagConfig[];
+    const deviceConfig = configuredTags.find((t) => t.mac.toUpperCase() === formattedMac);
 
-    // Jos tagia ei ole lisätty Homebridgen asetuksissa, ohitetaan se
     if (!deviceConfig) {
       return;
     }
