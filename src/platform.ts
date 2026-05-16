@@ -10,6 +10,7 @@ export class RuuviSensorsPlatform implements DynamicPlatformPlugin {
   public readonly Service: typeof Service;
   public readonly Characteristic: typeof Characteristic;
   public readonly accessories: Map<string, PlatformAccessory> = new Map();
+  private readonly accessoryHandlers: Map<string, RuuviPlatformAccessory> = new Map();
 
   constructor(
     public readonly log: Logger,
@@ -133,7 +134,11 @@ export class RuuviSensorsPlatform implements DynamicPlatformPlugin {
       accessory.context.device = deviceConfig;
     }
 
-    const accessoryHandler = new RuuviPlatformAccessory(this, accessory);
-    accessoryHandler.updateData(rawHexData);
+    let handler = this.accessoryHandlers.get(formattedMac);
+    if (!handler) {
+      handler = new RuuviPlatformAccessory(this, accessory);
+      this.accessoryHandlers.set(formattedMac, handler);
+    }
+    handler.updateData(rawHexData);
   }
 }
