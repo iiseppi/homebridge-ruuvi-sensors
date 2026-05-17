@@ -41,19 +41,21 @@
           "properties": {
             "name": {
               "title": "Name (e.g. Sauna)",
-              "type": "string",
-              "required": true
+              "type": "string"
             },
             "mac": {
               "title": "MAC Address (e.g. AA:BB:CC:DD:EE:FF)",
-              "type": "string",
-              "required": true
+              "type": "string"
             },
             "dataFormat8Key": {
               "title": "Decryption Key (Format 8 only, leave empty otherwise)",
               "type": "string"
             }
-          }
+          },
+          "required": [
+            "name",
+            "mac"
+          ]
         }
       }
     }
