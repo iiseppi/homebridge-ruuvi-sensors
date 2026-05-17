@@ -52,7 +52,7 @@ Enable the **Bluetooth** option in the plugin settings. The plugin will use your
 
 # Homebridge Ruuvi Sensors (Suomi)
 
-Moderni ja tyyppiturvallinen Homebridge-liitännäinen [RuuviTag](https://ruuvi.com)-antureille.
+Moderni Homebridge-liitännäinen [RuuviTag](https://ruuvi.com)-antureille.
 
 Tämä liitännäinen tuo Ruuvin ympäristöanturit Apple Koti -sovellukseen (HomeKit). Se näyttää reaaliaikaisen lämpötilan, ilmankosteuden ja pariston tason, minkä lisäksi se piirtää historiagraafeja Eve-sovelluksessa.
 
