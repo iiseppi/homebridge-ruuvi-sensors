@@ -2,7 +2,7 @@
   "name": "homebridge-ruuvi-sensors",
   "displayName": "Ruuvi Sensors",
   "type": "module",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "private": false,
   "description": "A modern Homebridge Dynamic Platform for Ruuvi sensors. Supports Ruuvi Gateway webhooks, local Bluetooth scanning, and all Ruuvi data formats including encrypted format 8.",
   "author": "iiseppi",
