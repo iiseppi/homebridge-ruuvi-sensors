@@ -5,7 +5,7 @@
 
 *(Scroll down for the Finnish version / Suomenkielinen ohje löytyy alempaa)*
 
-A modern, type-safe, and highly optimized Homebridge Dynamic Platform plugin for [RuuviTag](https://ruuvi.com) sensors. 
+A moder and highly optimized Homebridge Dynamic Platform plugin for [RuuviTag](https://ruuvi.com) sensors. 
 
 This plugin brings your Ruuvi environment sensors into Apple HomeKit, providing real-time temperature, humidity, and battery level data, alongside beautiful historical graphs in the Eve app.
 
