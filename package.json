@@ -26,6 +26,10 @@
     "weather"
   ],
   "main": "dist/index.js",
+  "files": [
+    "dist",
+    "config.schema.json"
+  ],
   "engines": {
     "node": ">=22.0.0",
     "homebridge": "^1.8.0 || ^2.0.0"
