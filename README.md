@@ -47,7 +47,7 @@ Enable the **Bluetooth** option in the plugin settings. The plugin will use your
 4. Set the URL to `http://<YOUR_HOMEBRIDGE_IP>:<PORT>` (e.g., `http://192.168.1.100:8080`).
 5. Ensure the data format is set to JSON.
 
-# Option C: Shelly BLE Gateway (Not tested yet!) 
+### Option C: Shelly BLE Gateway (Not tested yet!) 
 
 You can also use a compatible Shelly-device as a lightweight BLE-to-Webhook bridge.  
 
@@ -300,7 +300,7 @@ Kytke asetuksista **Bluetooth** päälle. Plugin alkaa automaattisesti kuunnella
 4. Syötä osoitteeksi `http://<HOMEBRIDGE_PALVELIMEN_IP>:<PORT>` (esim. `http://192.168.1.100:8080`).
 5. Varmista, että tiedostomuotona on JSON.
 
-# Vaihtoehto C: Shelly BLE Gateway (Tätä ei ole vielä testattu!)
+### Vaihtoehto C: Shelly BLE Gateway (Tätä ei ole vielä testattu!)
 
 Voit käyttää yhteensopivaa Shelly-laitetta kevyenä Bluetooth–Webhook-siltana.  
 
