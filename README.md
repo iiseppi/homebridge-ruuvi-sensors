@@ -3,6 +3,7 @@
 [![npm version](https://badge.fury.io/js/homebridge-ruuvi-sensors.svg)](https://badge.fury.io/js/homebridge-ruuvi-sensors)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 [![npm downloads](https://img.shields.io/npm/dt/homebridge-ruuvi-sensors.svg)](https://www.npmjs.com/package/homebridge-ruuvi-sensors)
+
 *(Scroll down for the Finnish version / Suomenkielinen ohje löytyy alempaa)*
 
 A moder and highly optimized Homebridge Dynamic Platform plugin for [RuuviTag](https://ruuvi.com) sensors. 
