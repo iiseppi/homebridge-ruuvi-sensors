@@ -47,6 +47,212 @@ Enable the **Bluetooth** option in the plugin settings. The plugin will use your
 4. Set the URL to `http://<YOUR_HOMEBRIDGE_IP>:<PORT>` (e.g., `http://192.168.1.100:8080`).
 5. Ensure the data format is set to JSON.
 
+# Option C: Shelly BLE Gateway (Not tested yet!) 
+
+You can also use a compatible Shelly-device as a lightweight BLE-to-Webhook bridge.  
+
+The script below scans nearby RuuviTags over Bluetooth and forwards the advertisements to Homebridge in the exact same JSON format as a real Ruuvi Gateway.
+
+This is especially useful if:
+
+- Your Homebridge server does not have Bluetooth.
+
+- Your RuuviTags are far away from the Homebridge server.
+
+- You already have a nearby Shelly Gen2/Gen3 device installed.
+
+### Supported Shelly Devices
+
+Works on Shelly devices that support:
+
+- Bluetooth scanning
+
+- Custom scripting (Shelly Script)
+
+Examples:
+
+- Shelly Plus Plug S
+
+- Shelly Plus 1
+
+- Shelly Gen3 devices
+
+### Setup Instructions
+
+1. Open your Shelly device web interface.
+
+2. Go to **Scripts**.
+
+3. Create a new script.
+
+4. Paste the script below.
+
+5. Change the `webhookUrl` to match your Homebridge server IP and plugin port.
+
+6. Save and start the script.
+
+7. Enable **Gateway Webhook** in the Homebridge plugin settings.
+
+The Shelly device will now behave like a miniature Ruuvi Gateway and forward BLE packets automatically.
+
+<details>
+
+<summary><strong>Shelly Script Example</strong></summary>
+
+```javascript
+
+// --- SETTINGS ---
+
+const CONFIG = {
+
+  webhookUrl: "http://192.168.1.100:8080", // CHANGE THIS TO YOUR HOMEBRIDGE IP AND PORT
+
+  sendIntervalMs: 10000 // Authentic Ruuvi Gateway send interval (10 seconds)
+
+};
+
+// -----------------
+
+let tagCache = {};
+
+// Helper function: Converts binary data to hex string
+
+function b2h(data) {
+
+  let res = "";
+
+  for (let i = 0; i < data.length; i++) {
+
+    let hex = data.charCodeAt(i).toString(16);
+
+    if (hex.length === 1) hex = "0" + hex;
+
+    res += hex.toUpperCase();
+
+  }
+
+  return res;
+
+}
+
+// Bluetooth scanner callback listening to all BLE traffic
+
+function scanCb(ev, res) {
+
+  if (ev !== Shelly.BLE.Scanner.SCAN_RESULT) return;
+
+  if (!res || !res.addr || !res.advData) return;
+
+  // Ruuvi manufacturer ID in decimal (0x0499 = 1177)
+
+  let mfgData = res.manufacturer_data;
+
+  if (mfgData && mfgData["1177"]) {
+
+    let mac = res.addr.toUpperCase();
+
+    let rssi = res.rssi;
+
+    let hexData = b2h(res.advData);
+
+    // Update the latest data in the cache
+
+    tagCache[mac] = {
+
+      "rssi": rssi,
+
+      "data": hexData
+
+    };
+
+  }
+
+}
+
+// Function to send data to Homebridge and clear the cache
+
+function sendData() {
+
+  let tagKeys = Object.keys(tagCache);
+
+  if (tagKeys.length === 0) return;
+
+  // Create a JSON payload exactly like the authentic Ruuvi Gateway
+
+  let payload = {
+
+    "data": {
+
+      "tags": tagCache
+
+    }
+
+  };
+
+  print("Sending HTTP POST: " + tagKeys.length + " Ruuvi(s) to Homebridge...");
+
+  Shelly.call(
+
+    "HTTP.POST", 
+
+    {
+
+      url: CONFIG.webhookUrl,
+
+      body: JSON.stringify(payload),
+
+      headers: { "Content-Type": "application/json" }
+
+    },
+
+    function (result, error_code, error_message) {
+
+      if (error_code !== 0) {
+
+        print("Error! Homebridge not responding: " + error_message);
+
+      }
+
+    }
+
+  );
+
+  // Clear the cache after sending
+
+  tagCache = {};
+
+}
+
+// Start the Bluetooth scanner
+
+Shelly.BLE.Scanner.Start({
+
+  duration_ms: Shelly.BLE.Scanner.INFINITE_SCAN,
+
+  active: false // Passive scanning is battery-friendly for RuuviTags
+
+}, scanCb);
+
+// Start the timer
+
+Timer.set(CONFIG.sendIntervalMs, true, sendData);
+
+print("Ruuvi Gateway Simulator started!");
+
+```
+
+</details>
+
+### Notes
+
+- Passive BLE scanning is used to minimize CPU and power usage.
+
+- The script forwards all detected RuuviTags automatically.
+
+- Multiple Shelly devices can be used simultaneously for better coverage.
+
+- The plugin treats Shelly-forwarded packets exactly like native Ruuvi Gateway packets.
+
 ---
 
 ---
@@ -93,3 +299,209 @@ Kytke asetuksista **Bluetooth** päälle. Plugin alkaa automaattisesti kuunnella
 3. Avaa **Settings -> Custom Server**.
 4. Syötä osoitteeksi `http://<HOMEBRIDGE_PALVELIMEN_IP>:<PORT>` (esim. `http://192.168.1.100:8080`).
 5. Varmista, että tiedostomuotona on JSON.
+
+# Vaihtoehto C: Shelly BLE Gateway (Tätä ei ole vielä testattu!)
+
+Voit käyttää yhteensopivaa Shelly-laitetta kevyenä Bluetooth–Webhook-siltana.  
+
+Alla oleva skripti kuuntelee lähialueen RuuviTag-mainospaketteja Bluetoothin kautta ja välittää ne Homebridgeen täsmälleen samassa JSON-muodossa kuin oikea Ruuvi Gateway.
+
+Tämä on hyödyllinen erityisesti silloin kun:
+
+- Homebridge-palvelimessa ei ole Bluetoothia.
+
+- RuuviTagit ovat liian kaukana Homebridge-palvelimesta.
+
+- Käytössäsi on jo lähellä oleva Shelly Gen2/Gen3 -laite.
+
+### Tuetut Shelly-laitteet
+
+Toimii Shelly-laitteilla, jotka tukevat:
+
+- Bluetooth-skannausta
+
+- Shelly Script -skriptauksia
+
+Esimerkkejä:
+
+- Shelly Plus Plug S
+
+- Shelly Plus 1
+
+- Shelly Gen3 -laitteet
+
+### Käyttöönotto
+
+1. Avaa Shelly-laitteen selainkäyttöliittymä.
+
+2. Mene kohtaan **Scripts**.
+
+3. Luo uusi skripti.
+
+4. Liitä alla oleva koodi.
+
+5. Vaihda `webhookUrl` vastaamaan Homebridge-palvelimesi IP-osoitetta ja porttia.
+
+6. Tallenna ja käynnistä skripti.
+
+7. Ota pluginin asetuksista käyttöön **Gateway Webhook**.
+
+Shelly-laite toimii tämän jälkeen pienenä Ruuvi Gatewayna ja välittää BLE-mainospaketit automaattisesti Homebridgeen.
+
+<details>
+
+<summary><strong> Shelly Script -esimerkki</strong></summary>
+
+```javascript
+
+// --- SETTINGS ---
+
+const CONFIG = {
+
+  webhookUrl: "http://192.168.1.100:8080", // VAIHDA TÄHÄN HOMEBRIDGE-PALVELIMESI IP JA PORTTI
+
+  sendIntervalMs: 10000 // Aidon Ruuvi Gatewayn lähetysväli (10 sekuntia)
+
+};
+
+// -----------------
+
+let tagCache = {};
+
+// Helper function: Converts binary data to hex string
+
+function b2h(data) {
+
+  let res = "";
+
+  for (let i = 0; i < data.length; i++) {
+
+    let hex = data.charCodeAt(i).toString(16);
+
+    if (hex.length === 1) hex = "0" + hex;
+
+    res += hex.toUpperCase();
+
+  }
+
+  return res;
+
+}
+
+// Bluetooth scanner callback listening to all BLE traffic
+
+function scanCb(ev, res) {
+
+  if (ev !== Shelly.BLE.Scanner.SCAN_RESULT) return;
+
+  if (!res || !res.addr || !res.advData) return;
+
+  // Ruuvi manufacturer ID in decimal (0x0499 = 1177)
+
+  let mfgData = res.manufacturer_data;
+
+  if (mfgData && mfgData["1177"]) {
+
+    let mac = res.addr.toUpperCase();
+
+    let rssi = res.rssi;
+
+    let hexData = b2h(res.advData);
+
+    // Update the latest data in the cache
+
+    tagCache[mac] = {
+
+      "rssi": rssi,
+
+      "data": hexData
+
+    };
+
+  }
+
+}
+
+// Function to send data to Homebridge and clear the cache
+
+function sendData() {
+
+  let tagKeys = Object.keys(tagCache);
+
+  if (tagKeys.length === 0) return;
+
+  // Create a JSON payload exactly like the authentic Ruuvi Gateway
+
+  let payload = {
+
+    "data": {
+
+      "tags": tagCache
+
+    }
+
+  };
+
+  print("Sending HTTP POST: " + tagKeys.length + " Ruuvi(s) to Homebridge...");
+
+  Shelly.call(
+
+    "HTTP.POST", 
+
+    {
+
+      url: CONFIG.webhookUrl,
+
+      body: JSON.stringify(payload),
+
+      headers: { "Content-Type": "application/json" }
+
+    },
+
+    function (result, error_code, error_message) {
+
+      if (error_code !== 0) {
+
+        print("Error! Homebridge not responding: " + error_message);
+
+      }
+
+    }
+
+  );
+
+  // Clear the cache after sending
+
+  tagCache = {};
+
+}
+
+// Start the Bluetooth scanner
+
+Shelly.BLE.Scanner.Start({
+
+  duration_ms: Shelly.BLE.Scanner.INFINITE_SCAN,
+
+  active: false // Passive scanning säästää resursseja ja akkua
+
+}, scanCb);
+
+// Start the timer
+
+Timer.set(CONFIG.sendIntervalMs, true, sendData);
+
+print("Ruuvi Gateway Simulator started!");
+
+```
+
+</details>
+
+### Huomioita
+
+- Skripti käyttää passiivista BLE-skannausta resurssien säästämiseksi.
+
+- Kaikki löydetyt RuuviTagit välitetään automaattisesti Homebridgeen.
+
+- Useita Shelly-laitteita voi käyttää samanaikaisesti kattavuuden parantamiseksi.
+
+- Plugin käsittelee Shellyn välittämät paketit täysin samalla tavalla kuin aidon Ruuvi Gatewayn lähettämät paketit.
