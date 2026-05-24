@@ -102,142 +102,95 @@ The Shelly device will now behave like a miniature Ruuvi Gateway and forward BLE
 ```javascript
 
 // --- SETTINGS ---
-
 const CONFIG = {
-
-  webhookUrl: "http://192.168.1.100:8080", // CHANGE THIS TO YOUR HOMEBRIDGE IP AND PORT
-
+  webhookUrl: "http://192.168.1.2:8080", // VAIHDA TÄHÄN HOMEBRIDGE IP JA PORTTI
   sendIntervalMs: 10000 // Authentic Ruuvi Gateway send interval (10 seconds)
-
 };
-
 // -----------------
 
 let tagCache = {};
 
 // Helper function: Converts binary data to hex string
-
 function b2h(data) {
-
   let res = "";
-
   for (let i = 0; i < data.length; i++) {
-
     let hex = data.charCodeAt(i).toString(16);
-
     if (hex.length === 1) hex = "0" + hex;
-
     res += hex.toUpperCase();
-
   }
-
   return res;
-
 }
 
 // Bluetooth scanner callback listening to all BLE traffic
-
-function scanCb(ev, res) {
-
-  if (ev !== Shelly.BLE.Scanner.SCAN_RESULT) return;
-
-  if (!res || !res.addr || !res.advData) return;
+function scanCb(event, result) {
+  // Use official API constants: BLE.Scanner.SCAN_RESULT
+  if (event !== BLE.Scanner.SCAN_RESULT) return;
+  if (!result || !result.addr || !result.advData) return;
 
   // Ruuvi manufacturer ID in decimal (0x0499 = 1177)
-
-  let mfgData = res.manufacturer_data;
-
+  let mfgData = result.manufacturer_data;
   if (mfgData && mfgData["1177"]) {
-
-    let mac = res.addr.toUpperCase();
-
-    let rssi = res.rssi;
-
-    let hexData = b2h(res.advData);
+    let mac = result.addr.toUpperCase();
+    let rssi = result.rssi;
+    let hexData = b2h(result.advData);
 
     // Update the latest data in the cache
-
     tagCache[mac] = {
-
       "rssi": rssi,
-
       "data": hexData
-
     };
-
   }
-
 }
 
 // Function to send data to Homebridge and clear the cache
-
 function sendData() {
-
   let tagKeys = Object.keys(tagCache);
-
   if (tagKeys.length === 0) return;
 
   // Create a JSON payload exactly like the authentic Ruuvi Gateway
-
   let payload = {
-
     "data": {
-
       "tags": tagCache
-
     }
-
   };
 
   print("Sending HTTP POST: " + tagKeys.length + " Ruuvi(s) to Homebridge...");
 
   Shelly.call(
-
     "HTTP.POST", 
-
     {
-
       url: CONFIG.webhookUrl,
-
       body: JSON.stringify(payload),
-
       headers: { "Content-Type": "application/json" }
-
     },
-
     function (result, error_code, error_message) {
-
       if (error_code !== 0) {
-
         print("Error! Homebridge not responding: " + error_message);
-
       }
-
     }
-
   );
 
   // Clear the cache after sending
-
   tagCache = {};
-
 }
 
-// Start the Bluetooth scanner
+// Start or hook into the BLE Scanner using proper Gen3 API
+if (BLE.Scanner.isRunning()) {
+  print("BLE Scanner is already running by another script. Subscribing to events...");
+} else {
+  print("Starting a new BLE Scanner...");
+  BLE.Scanner.start({
+    duration_ms: BLE.Scanner.INFINITE_SCAN,
+    active: false // Passive scanning is battery-friendly for RuuviTags
+  });
+}
 
-Shelly.BLE.Scanner.Start({
+// Subscribe our callback to the Scanner
+BLE.Scanner.subscribe(scanCb);
 
-  duration_ms: Shelly.BLE.Scanner.INFINITE_SCAN,
-
-  active: false // Passive scanning is battery-friendly for RuuviTags
-
-}, scanCb);
-
-// Start the timer
-
+// Start the upload timer
 Timer.set(CONFIG.sendIntervalMs, true, sendData);
-
-print("Ruuvi Gateway Simulator started!");
+print("Ruuvi Gateway Simulator started successfully!");
 
 ```
 
@@ -354,143 +307,96 @@ Shelly-laite toimii tämän jälkeen pienenä Ruuvi Gatewayna ja välittää BLE
 
 ```javascript
 
-// --- SETTINGS ---
-
+// --- ASETUKSET ---
 const CONFIG = {
-
-  webhookUrl: "http://192.168.1.100:8080", // VAIHDA TÄHÄN HOMEBRIDGE-PALVELIMESI IP JA PORTTI
-
-  sendIntervalMs: 10000 // Aidon Ruuvi Gatewayn lähetysväli (10 sekuntia)
-
+  webhookUrl: "http://192.168.1.2:8080", // VAIHDA TÄHÄN HOMEBRIDGESI IP-OSOITE JA PORTTI
+  sendIntervalMs: 10000 // Virallisen Ruuvi Gatewayn lähetysväli (10 sekuntia)
 };
-
 // -----------------
 
 let tagCache = {};
 
-// Helper function: Converts binary data to hex string
-
+// Apufunktio: Muuttaa binääridatan hex-muotoon (merkkijonoksi)
 function b2h(data) {
-
   let res = "";
-
   for (let i = 0; i < data.length; i++) {
-
     let hex = data.charCodeAt(i).toString(16);
-
     if (hex.length === 1) hex = "0" + hex;
-
     res += hex.toUpperCase();
-
   }
-
   return res;
-
 }
 
-// Bluetooth scanner callback listening to all BLE traffic
+// Bluetooth-skannerin takaisinkutsu, joka kuuntelee kaikkea BLE-liikennettä
+function scanCb(event, result) {
+  // Käytetään virallisia API-vakioita: BLE.Scanner.SCAN_RESULT
+  if (event !== BLE.Scanner.SCAN_RESULT) return;
+  if (!result || !result.addr || !result.advData) return;
 
-function scanCb(ev, res) {
-
-  if (ev !== Shelly.BLE.Scanner.SCAN_RESULT) return;
-
-  if (!res || !res.addr || !res.advData) return;
-
-  // Ruuvi manufacturer ID in decimal (0x0499 = 1177)
-
-  let mfgData = res.manufacturer_data;
-
+  // Ruuvin valmistajatunnus kymmenjärjestelmässä (0x0499 = 1177)
+  let mfgData = result.manufacturer_data;
   if (mfgData && mfgData["1177"]) {
+    let mac = result.addr.toUpperCase();
+    let rssi = result.rssi;
+    let hexData = b2h(result.advData);
 
-    let mac = res.addr.toUpperCase();
-
-    let rssi = res.rssi;
-
-    let hexData = b2h(res.advData);
-
-    // Update the latest data in the cache
-
+    // Päivitetään RuuviTagin uusin data välimuistiin
     tagCache[mac] = {
-
       "rssi": rssi,
-
       "data": hexData
-
     };
-
   }
-
 }
 
-// Function to send data to Homebridge and clear the cache
-
+// Funktio, joka lähettää välimuistissa olevat tiedot Homebridgeen ja tyhjentää välimuistin
 function sendData() {
-
   let tagKeys = Object.keys(tagCache);
-
   if (tagKeys.length === 0) return;
 
-  // Create a JSON payload exactly like the authentic Ruuvi Gateway
-
+  // Luodaan JSON-paketti, joka vastaa täysin aitoa Ruuvi Gatewayta
   let payload = {
-
     "data": {
-
       "tags": tagCache
-
     }
-
   };
 
-  print("Sending HTTP POST: " + tagKeys.length + " Ruuvi(s) to Homebridge...");
+  print("Lähetetään HTTP POST: " + tagKeys.length + " RuuviTagin tiedot Homebridgeen...");
 
   Shelly.call(
-
     "HTTP.POST", 
-
     {
-
       url: CONFIG.webhookUrl,
-
       body: JSON.stringify(payload),
-
       headers: { "Content-Type": "application/json" }
-
     },
-
     function (result, error_code, error_message) {
-
       if (error_code !== 0) {
-
-        print("Error! Homebridge not responding: " + error_message);
-
+        print("Virhe! Homebridge ei vastaa: " + error_message);
       }
-
     }
-
   );
 
-  // Clear the cache after sending
-
+  // Tyhjennetään välimuisti lähetyksen jälkeen
   tagCache = {};
-
 }
 
-// Start the Bluetooth scanner
+// Käynnistetään Bluetooth-skanneri tai hyödynnetään jo käynnissä olevaa (Gen3 API)
+if (BLE.Scanner.isRunning()) {
+  print("Bluetooth-skanneri pyörii jo taustalla (toisen skriptin käynnistämänä). Liitytään mukaan...");
+} else {
+  print("Käynnistetään uusi Bluetooth-skanneri...");
+  BLE.Scanner.start({
+    duration_ms: BLE.Scanner.INFINITE_SCAN,
+    active: false // Passiivinen skannaus säästää RuuviTagien paristoja
+  });
+}
 
-Shelly.BLE.Scanner.Start({
+// Tilataan skannerin tuottamat BLE-tapahtumat omaan funktioomme
+BLE.Scanner.subscribe(scanCb);
 
-  duration_ms: Shelly.BLE.Scanner.INFINITE_SCAN,
-
-  active: false // Passive scanning säästää resursseja ja akkua
-
-}, scanCb);
-
-// Start the timer
-
+// Käynnistetään ajastin datan säännöllistä lähetystä varten
 Timer.set(CONFIG.sendIntervalMs, true, sendData);
-
-print("Ruuvi Gateway Simulator started!");
+print("Ruuvi Gateway -simulaattori käynnistetty onnistuneesti!");
 
 ```
 
