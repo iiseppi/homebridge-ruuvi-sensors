@@ -46,7 +46,7 @@ export class RuuviSensorsPlatform implements DynamicPlatformPlugin {
     this.api.on('didFinishLaunching', () => {
       this.cleanupOrphanedAccessories();
 
-      // UUSI LISÄYS: Herätetään Fakegato ja palvelut heti käynnistyksessä kaikille laitteille!
+      // Herätetään Fakegato ja palvelut heti käynnistyksessä kaikille laitteille
       for (const accessory of this.accessories.values()) {
         const mac = accessory.context.device.mac.toUpperCase();
         if (!this.accessoryHandlers.has(mac)) {
@@ -129,30 +129,50 @@ export class RuuviSensorsPlatform implements DynamicPlatformPlugin {
     const port = this.config.gateway.port || 8080;
 
     const server = http.createServer((req, res) => {
+      // Kirjataan ylös heti, kun jokin ottaa yhteyttä palvelimeen
+      const clientIp = req.socket.remoteAddress || 'Tuntematon IP';
+      this.log.info(`📥 Webhook-yhteys vastaanotettu osoitteesta: ${clientIp}`);
+
       if (req.method === 'POST') {
         let body = '';
         req.on('data', chunk => body += chunk.toString());
+        
         req.on('end', () => {
+          this.log.debug(`📦 Vastaanotettu Webhook-raakadata: ${body}`);
+
           try {
             const payload = JSON.parse(body) as GatewayPayload;
+            
             if (payload.data && payload.data.tags) {
+              const tagCount = Object.keys(payload.data.tags).length;
+              this.log.info(`✅ Tunnistettiin ${tagCount} RuuviTagia Webhook-paketista!`);
+
               for (const [mac, tagData] of Object.entries(payload.data.tags)) {
                 const rawHexData = tagData.data;
                 this.processRuuviData(mac.toUpperCase(), rawHexData);
               }
+            } else {
+              this.log.warn('⚠️ Webhook-paketti vastaanotettu, mutta se ei sisältänyt Ruuvi-tageja.');
             }
-            res.writeHead(200); res.end('OK');
-          } catch {
-            res.writeHead(400); res.end('Bad Request');
+            
+            res.writeHead(200); 
+            res.end('OK');
+          } catch (error) {
+            this.log.error(`❌ Virhe Webhook-datan purkamisessa: ${error}`);
+            res.writeHead(400); 
+            res.end('Bad Request');
           }
         });
       } else {
-        res.writeHead(404); res.end('Not Found');
+        this.log.warn(`⚠️ Hylättiin pyyntö (${req.method}), sallittu vain POST.`);
+        res.writeHead(404); 
+        res.end('Not Found');
       }
     });
 
-    server.listen(port, () => {
-      this.log.info(`Ruuvi Gateway Webhook server listening on port ${port}`);
+    // TÄRKEÄÄ: Lisätty '0.0.0.0', jotta palvelin kuuntelee ulkoista liikennettä (esim. Shellyä)
+    server.listen(port, '0.0.0.0', () => {
+      this.log.info(`🟢 Ruuvi Webhook -palvelin käynnistetty portissa ${port} (Kaikki verkon IP:t sallittu)`);
     });
   }
 
